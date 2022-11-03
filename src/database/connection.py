@@ -1,6 +1,7 @@
 import psycopg
 from psycopg import OperationalError
 import os
+import sys
 
 def create_connection(db_name, db_user, db_password, db_host = "localhost", db_port = "5432"):
     connection = None
@@ -29,6 +30,8 @@ def execute_query(query, params=None):
         return cursor
     except OSError as e:
         print(f"The error '{e}' occurred or the hero name is already taken")
+    except NameError as e:
+        print(f"This was a name error.")
 
 # ------------------------------------------------- DON'T CHANGE ANYTHING ABOVE THIS LINE --------------------------------------------
 
@@ -88,6 +91,208 @@ def create_new_superhero(name_in, about_in, bio_in):
     title_screen()
     menu_list()
 
+def lookup_name_by_id(id_in):
+    query = """
+        SELECT name FROM heroes WHERE id=%s
+        """
+    returned_items = execute_query(query, (id_in,)).fetchall()
+
+    return(returned_items[0][0])
+
+def lookup_id_by_name(name_in):
+    query = """
+        SELECT id FROM heroes WHERE name=%s
+        """
+    returned_items = execute_query(query, (name_in,)).fetchall()
+
+    return(returned_items[0][0])
+
+def add_a_relationship(hero1, hero2, rel_type):
+    query = """
+        INSERT INTO relationships (hero1_id, hero2_id, relationship_type_id)
+        VALUES (%s, %s, %s)
+        """
+    execute_query(query, (hero1, hero2, rel_type))
+
+def add_an_ability(hero_id, ability_id):
+    query = """
+        INSERT INTO abilities (hero_id, ability_type_id)
+        VALUES (%s, %s)
+        """
+    execute_query(query, (hero_id, ability_id))
+    hero_name = lookup_name_by_id(hero_id)
+    ability_name = lookup_ability_by_id(ability_id)
+    print("")
+    print(hero_name, " has been given the power of ", ability_name, "!")
+    print("View the profile again to verify (Main Menu option 1).")
+    input()
+
+def remove_an_ability(hero_id, ability_id):
+    query = """
+        DELETE FROM abilities (hero_id, ability_type_id)
+        VALUES (%s, %s)
+        """
+    execute_query(query, (hero_id, ability_id))
+    hero_name = lookup_name_by_id(hero_id)
+    ability_name = lookup_ability_by_id(ability_id)
+    print("")
+    print(hero_name, " no longer has the power of ", ability_name, "!")
+    print("View the profile again to verify (Main Menu option 1).")
+    input()
+
+
+def lookup_ability_by_id(id_in):
+    query = """
+        SELECT name FROM ability_types WHERE id=%s
+        """
+    returned_items = execute_query(query, (id_in,)).fetchall()
+
+    return(returned_items[0][0])
+
+def lookup_id_by_ability(ability_name_in):
+    query = """
+        SELECT id FROM ability_types WHERE name=%s
+        """
+    try:
+        returned_items = execute_query(query, (id_in,)).fetchall()
+    except NameError as e:
+        print(f"This was a name error: {e}")
+
+    return(returned_items[0][0])
+
+def show_profile(name_in):
+    # This function takes in the name of the superhero
+    # and returns their about me and biography, a list of their superpowers,
+    # and a list of their alliances
+    os.system('clear')
+    query = """
+        SELECT name, about_me, biography FROM heroes WHERE name = %s
+        """
+    returned_items = execute_query(query, (name_in,)).fetchall()
+    print("")
+    print("Name:\t", returned_items[0][0])
+    print("")
+    print("About:\t", returned_items[0][1])
+    print("")
+    print("Biography:\n\t", returned_items[0][2])
+
+    query = """
+        SELECT heroes.name, ability_types.name FROM heroes 
+            JOIN abilities ON hero_id = heroes.id
+            JOIN ability_types on ability_types.id = abilities.ability_type_id
+            WHERE heroes.name = %s
+        """
+    returned_items = execute_query(query, (name_in,)).fetchall()
+    print("")
+    print("Superpowers:")
+    for item in returned_items:
+        print("\t", item[1])
+
+    query = """
+        SELECT heroes.name, relationship_types.name, relationships.hero2_id FROM heroes
+            JOIN relationships ON relationships.hero1_id = heroes.id
+            JOIN relationship_types on relationship_types.id = relationships.relationship_type_id
+        WHERE heroes.name = %s
+        """
+    returned_items = execute_query(query, (name_in,)).fetchall()
+    print("")
+    print("Friends:")
+    for item in returned_items:
+        if item[1]=="Friend":
+            friend_name = lookup_name_by_id(item[2])
+            print("\t", friend_name)
+    print("")
+    print("Enemies:")
+    for item in returned_items:
+        if item[1]=="Enemy":
+            enemy_name = lookup_name_by_id(item[2])
+            print("\t", enemy_name)
+
+    print("")
+    choice = input("""
+1.) Modify Relationships
+2.) Modify Superpowers
+3.) Return to the Main Menu
+    """)
+    match choice:
+        case "1":
+            print("")
+            hero_2_name = input("Enter the other hero's name: ")
+            relationship_choice = input("Is this a <F>riendship or are they <E>nemies? ").upper()
+            if relationship_choice == "F":
+                relationship_type = 1
+            elif relationship_choice == "E":
+                relationship_type = 2
+            else:
+                print("Sorry, invalid selection.")
+                input()
+                os.system('clear')
+                title_screen()
+                menu_list()
+            hero_1_id = lookup_id_by_name(name_in)
+            hero_2_id = lookup_id_by_name(hero_2_name)
+            add_a_relationship(hero_1_id, hero_2_id, relationship_type)
+            print("")
+            print("New relationship added! View the profile again to verify (Main Menu option 1).")
+            input()
+            os.system('clear')
+            title_screen()
+            menu_list()
+
+        case "2":
+            print("")
+            choice = input("<A>dd a new ability or <R>emove an existing ability? ")
+            if choice.upper() == "A":
+                hero_id = lookup_id_by_name(name_in)
+                ability_name = input("Enter the new ability: ")
+                ability_id = lookup_id_by_ability(ability_name)
+                add_an_ability(hero_id, ability_id)
+            elif choice.upper() == "R":
+                hero_id = lookup_id_by_name(name_in)
+                ability_name = input("Enter the new ability: ")
+                ability_id = lookup_id_by_ability(ability_name)
+                remove_an_ability(hero_id, ability_id)
+            else:
+                print("")
+                print("Sorry, that was an invalid entry.")
+                input()
+                os.system('clear')
+                title_screen()
+                menu_list() 
+
+        case "3":
+            os.system('clear')
+            title_screen()
+            menu_list()
+        
+    print("")
+    print("Sorry, that was an invalid entry.")
+    input()
+    os.system('clear')
+    title_screen()
+    menu_list()    
+
+
+
+    # query = """
+    #     SELECT heroes.name, heroes.about_me, heroes.biography, ability_types.name, relationships.hero1_id, relationships.hero2_id, relationship_types.name FROM heroes
+    #         JOIN abilities ON hero_id = heroes.id
+    #         JOIN ability_types ON ability_type_id = abilities.id
+    #         JOIN relationships ON hero1_id = heroes.id
+    #         JOIN relationship_types ON relationship_types.id = relationship_type_id
+    #     WHERE heroes.name='Mental Mary'
+    #     """
+    # print("")
+    # returned_items = execute_query(query).fetchall()
+    # print(returned_items)
+    # for item in returned_items:
+    #     print("Name: ", item[0])
+    #     print("About: ", item[1])
+    #     print("Superpower: ", item[3])
+    #     print(item[4])
+    #     print(item[5])
+    #     print(item[6])
+
 def all_superheroes_with_abilities():
     query = """
         SELECT heroes.name, ability_types.name FROM heroes
@@ -106,7 +311,17 @@ def all_superheroes_with_abilities():
     title_screen()
     menu_list()
 
-# select_all()
+def delete_superhero(name_in):
+    query = """
+        DELETE FROM heroes WHERE name = %s
+        """
+    execute_query(query, (name_in,))
+    print("")
+    print(name_in, " has been eradicated. Use Main Menu option 2 to verify.")
+    input() 
+    os.system('clear')
+    title_screen()
+    menu_list()
 
 def title_screen():
     os.system("clear")
@@ -114,22 +329,26 @@ def title_screen():
     print("╒═══════════════╕")
     print("│SUPERHEROES NET│")
     print("╘═══════════════╛")
-    print("")
 
 def menu_list():
-    choice = input("""1.) Search by Superhero Name
+    choice = input("""
+1.) Display/Modify a Superhero Profile
 2.) List all Superheroes
 3.) List all Abilities
-4.) Enter a New Superhero
+4.) Create a New Superhero Profile
 5.) List Superheroes With Abilities
+6.) 
+7.) Remove a Superhero
+
+0 (zero) to Exit.
 
 Enter your selection: """)
 
     match choice:
         case "1":
             print("")
-            search_name=input("Enter the superhero name: ")
-            search_by_name(search_name)
+            name_in = input("Superhero's User Name: ")
+            show_profile(name_in)
 
         case "2":
             print("")
@@ -152,10 +371,28 @@ Enter your selection: """)
             print("")
             all_superheroes_with_abilities()
 
+        case "6":
+            pass
+
+        case "7":
+            print("")
+            print("THANOS MODE ACTIVATED.")
+            name_in = input("Superhero to Eradicate? ")
+            delete_superhero(name_in)
+
+        case "0":
+            sys.exit()
+
+    print("")
+    input("Sorry, that was an invalid entry.")
+    os.system('clear')
+    title_screen()
+    menu_list()    
+
+# ------------------------------------ ACTUAL MAIN PROGRAM -----------------------------------------------
 
 title_screen()
 menu_list()
-
 
 input()
 os.system('clear')
