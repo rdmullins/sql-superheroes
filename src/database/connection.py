@@ -31,7 +31,7 @@ def execute_query(query, params=None):
     except OSError as e:
         print(f"The error '{e}' occurred or the hero name is already taken")
     except NameError as e:
-        print(f"This was a name error.")
+        print(f"This was a name error: {e}")
 
 # ------------------------------------------------- DON'T CHANGE ANYTHING ABOVE THIS LINE --------------------------------------------
 
@@ -44,19 +44,19 @@ def select_all_heroes():
     query = """
         SELECT * from heroes
     """
-
     returned_items = execute_query(query).fetchall()
     for item in returned_items:
         print(item[1])
+
 
 def select_all_abilities():
     query = """
         SELECT * from ability_types
     """
-
     returned_items = execute_query(query).fetchall()
     for item in returned_items:
         print(item[1])
+
 
 def search_by_name(name_in):
     query = """
@@ -69,6 +69,7 @@ def search_by_name(name_in):
     os.system('clear')
     title_screen()
     menu_list()
+
 
 def create_new_superhero(name_in, about_in, bio_in):
     query = """
@@ -83,21 +84,29 @@ def create_new_superhero(name_in, about_in, bio_in):
     title_screen()
     menu_list()
 
+
 def lookup_name_by_id(id_in):
     query = """
         SELECT name FROM heroes WHERE id=%s
         """
     returned_items = execute_query(query, (id_in,)).fetchall()
-
     return(returned_items[0][0])
+
 
 def lookup_id_by_name(name_in):
     query = """
         SELECT id FROM heroes WHERE name=%s
         """
     returned_items = execute_query(query, (name_in,)).fetchall()
+    if len(returned_items) == 0:
+        print("Sorry, there is no superhero by that name. Returning to Main Menu.")
+        input()
+        os.system('clear')
+        title_screen()
+        menu_list()
+    else:
+        return(returned_items[0][0])
 
-    return(returned_items[0][0])
 
 def add_a_relationship(hero1, hero2, rel_type):
     query = """
@@ -105,6 +114,7 @@ def add_a_relationship(hero1, hero2, rel_type):
         VALUES (%s, %s, %s)
         """
     execute_query(query, (hero1, hero2, rel_type))
+
 
 def add_an_ability(hero_id, ability_id):
     query = """
@@ -118,6 +128,34 @@ def add_an_ability(hero_id, ability_id):
     print(hero_name, " has been given the power of ", ability_name, "!")
     print("View the profile again to verify (Main Menu option 1).")
     input()
+
+
+def create_new_ability(ability_desc_in):
+    query = """
+        INSERT INTO ability_types (name)
+        VALUES (%s)
+        """
+    execute_query(query, (ability_desc_in,))
+    print("")
+    print(ability_desc_in, " has been added to the list of superpowers! Use Main Menu option 3 to verify.")
+    input()
+    os.system('clear')
+    title_screen()
+    menu_list()
+
+
+def remove_existing_ability(ability_desc_in):
+    query = """
+        DELETE FROM ability_types WHERE name = %s
+        """
+    execute_query(query, (ability_desc_in,))
+    print("")
+    print(ability_desc_in, " has been removed from the list of abilities. Use Main Menu option 3 to verify.")
+    input()
+    os.system('clear')
+    title_screen()
+    menu_list()
+
 
 def remove_an_ability(hero_id, ability_id):
     query = """
@@ -137,8 +175,8 @@ def lookup_ability_by_id(id_in):
         SELECT name FROM ability_types WHERE id=%s
         """
     returned_items = execute_query(query, (id_in,)).fetchall()
-
     return(returned_items[0][0])
+
 
 def lookup_id_by_ability(ability_name_in):
     query = """
@@ -148,8 +186,8 @@ def lookup_id_by_ability(ability_name_in):
         returned_items = execute_query(query, (ability_name_in,)).fetchall()
     except NameError as e:
         print(f"This was a name error: {e}")
-
     return(returned_items[0][0])
+
 
 def show_profile(name_in):
     # This function takes in the name of the superhero
@@ -162,129 +200,136 @@ def show_profile(name_in):
         SELECT name, about_me, biography FROM heroes WHERE name = %s
         """
     returned_items = execute_query(query, (name_in,)).fetchall()
-    print("")
-    print("Name:\t", returned_items[0][0])
-    print("")
-    print("About:\t", returned_items[0][1])
-    print("")
-    print("Biography:\n", returned_items[0][2])
+    if len(returned_items) == 0:
+        print("Sorry, there is no superhero by that name. Returning to Main Menu.")
+        input()
+        os.system('clear')
+        title_screen()
+        menu_list()
+    else:
+        print("")
+        print("Name:\t", returned_items[0][0])
+        print("")
+        print("About:\t", returned_items[0][1])
+        print("")
+        print("Biography:\n", returned_items[0][2])
 
-    query = """
-        SELECT heroes.name, ability_types.name FROM heroes 
-            JOIN abilities ON hero_id = heroes.id
-            JOIN ability_types on ability_types.id = abilities.ability_type_id
+        query = """
+            SELECT heroes.name, ability_types.name FROM heroes 
+                JOIN abilities ON hero_id = heroes.id
+                JOIN ability_types on ability_types.id = abilities.ability_type_id
+                WHERE heroes.name = %s
+            """
+        returned_items = execute_query(query, (name_in,)).fetchall()
+        print("")
+        print("Superpowers:")
+        for item in returned_items:
+            print("\t", item[1])
+
+        query = """
+            SELECT heroes.name, relationship_types.name, relationships.hero2_id FROM heroes
+                JOIN relationships ON relationships.hero1_id = heroes.id
+                JOIN relationship_types on relationship_types.id = relationships.relationship_type_id
             WHERE heroes.name = %s
-        """
-    returned_items = execute_query(query, (name_in,)).fetchall()
-    print("")
-    print("Superpowers:")
-    for item in returned_items:
-        print("\t", item[1])
+            """
+        returned_items = execute_query(query, (name_in,)).fetchall()
+        print("")
+        print("Friends:")
+        for item in returned_items:
+            if item[1]=="Friend":
+                friend_name = lookup_name_by_id(item[2])
+                print("\t", friend_name)
+        print("")
+        print("Enemies:")
+        for item in returned_items:
+            if item[1]=="Enemy":
+                enemy_name = lookup_name_by_id(item[2])
+                print("\t", enemy_name)
 
-    query = """
-        SELECT heroes.name, relationship_types.name, relationships.hero2_id FROM heroes
-            JOIN relationships ON relationships.hero1_id = heroes.id
-            JOIN relationship_types on relationship_types.id = relationships.relationship_type_id
-        WHERE heroes.name = %s
-        """
-    returned_items = execute_query(query, (name_in,)).fetchall()
-    print("")
-    print("Friends:")
-    for item in returned_items:
-        if item[1]=="Friend":
-            friend_name = lookup_name_by_id(item[2])
-            print("\t", friend_name)
-    print("")
-    print("Enemies:")
-    for item in returned_items:
-        if item[1]=="Enemy":
-            enemy_name = lookup_name_by_id(item[2])
-            print("\t", enemy_name)
-
-    print("")
-    choice = input("""
+        print("")
+        choice = input("""
 1.) Modify Relationships
 2.) Modify Superpowers
 3.) Return to the Main Menu
 
 """)
-    match choice:
-        case "1":
-            print("")
-            hero_2_name = input("Enter the other hero's name (Or enter <L> to see a list): ")
-            if hero_2_name.upper() == "L":
+        match choice:
+            case "1":
                 print("")
-                print("SUPERHEROES:")
-                select_all_heroes()
+                hero_2_name = input("Enter the other hero's name (Or enter <L> to see a list): ")
+                if hero_2_name.upper() == "L":
+                    print("")
+                    print("SUPERHEROES:")
+                    select_all_heroes()
+                    print("")
+                    hero_2_name = input("Enter the other hero's name: ")
+                relationship_choice = input("Is this a <F>riendship or are they <E>nemies? ").upper()
+                if relationship_choice == "F":
+                    relationship_type = 1
+                elif relationship_choice == "E":
+                    relationship_type = 2
+                else:
+                    print("Sorry, invalid selection.")
+                    input()
+                    os.system('clear')
+                    title_screen()
+                    menu_list()
+                hero_1_id = lookup_id_by_name(name_in)
+                hero_2_id = lookup_id_by_name(hero_2_name)
+                add_a_relationship(hero_1_id, hero_2_id, relationship_type)
                 print("")
-                hero_2_name = input("Enter the other hero's name: ")
-            relationship_choice = input("Is this a <F>riendship or are they <E>nemies? ").upper()
-            if relationship_choice == "F":
-                relationship_type = 1
-            elif relationship_choice == "E":
-                relationship_type = 2
-            else:
-                print("Sorry, invalid selection.")
+                print("New relationship added! View the profile again to verify (Main Menu option 1).")
                 input()
                 os.system('clear')
                 title_screen()
                 menu_list()
-            hero_1_id = lookup_id_by_name(name_in)
-            hero_2_id = lookup_id_by_name(hero_2_name)
-            add_a_relationship(hero_1_id, hero_2_id, relationship_type)
-            print("")
-            print("New relationship added! View the profile again to verify (Main Menu option 1).")
-            input()
-            os.system('clear')
-            title_screen()
-            menu_list()
 
-        case "2":
-            print("")
-            choice = input("<A>dd a new ability or <R>emove an existing ability? ")
-            if choice.upper() == "A":
-                hero_id = lookup_id_by_name(name_in)
-                ability_name = input("Enter the new ability (or enter <L> to see a list): ")
-                if ability_name.upper() == "L":
-                    print("")
-                    print("ABILITIES:")
-                    select_all_abilities()
-                    print("")
-                    ability_name = input("Enter the new ability: ")
-                ability_id = lookup_id_by_ability(ability_name)
-                add_an_ability(hero_id, ability_id)
-                input()
-                os.system('clear')
-                title_screen()
-                menu_list() 
-            elif choice.upper() == "R":
-                hero_id = lookup_id_by_name(name_in)
-                ability_name = input("Enter the ability to be removed: ")
-                ability_id = lookup_id_by_ability(ability_name)
-                remove_an_ability(hero_id, ability_id)
-                input()
-                os.system('clear')
-                title_screen()
-                menu_list() 
-            else:
+            case "2":
                 print("")
-                print("Sorry, that was an invalid entry.")
-                input()
+                choice = input("<A>dd a new ability or <R>emove an existing ability? ")
+                if choice.upper() == "A":
+                    hero_id = lookup_id_by_name(name_in)
+                    ability_name = input("Enter the new ability (or enter <L> to see a list): ")
+                    if ability_name.upper() == "L":
+                        print("")
+                        print("ABILITIES:")
+                        select_all_abilities()
+                        print("")
+                        ability_name = input("Enter the new ability: ")
+                    ability_id = lookup_id_by_ability(ability_name)
+                    add_an_ability(hero_id, ability_id)
+                    input()
+                    os.system('clear')
+                    title_screen()
+                    menu_list() 
+                elif choice.upper() == "R":
+                    hero_id = lookup_id_by_name(name_in)
+                    ability_name = input("Enter the ability to be removed: ")
+                    ability_id = lookup_id_by_ability(ability_name)
+                    remove_an_ability(hero_id, ability_id)
+                    input()
+                    os.system('clear')
+                    title_screen()
+                    menu_list() 
+                else:
+                    print("")
+                    print("Sorry, that was an invalid entry.")
+                    input()
+                    os.system('clear')
+                    title_screen()
+                    menu_list() 
+
+            case "3":
                 os.system('clear')
                 title_screen()
-                menu_list() 
-
-        case "3":
-            os.system('clear')
-            title_screen()
-            menu_list()
-        
-    print("")
-    print("Sorry, that was an invalid entry.")
-    input()
-    os.system('clear')
-    title_screen()
-    menu_list()    
+                menu_list()
+            
+        # print("")
+        # print("Sorry, that was an invalid entry.")
+        # input()
+        # os.system('clear')
+        # title_screen()
+        # menu_list()    
 
 def all_superheroes_with_abilities():
     title_screen()
@@ -320,12 +365,6 @@ def delete_superhero(name_in):
 
 def title_screen():
     os.system("clear")
-    # print("")
-    # print(" ")
-    # print(" ◈ ◈ ◈ ◈ ◈ ╔══════════════╗ ◈ ◈ ◈ ◈ ◈")
-    # print("╒══════════╝  SUPERHEROES ╚══════════╕")
-    # print("│                 NET                │")
-    # print("╞════════════════════════════════════╡")
     print("  ______                                      __    __            __")
     print(" /      \\                                    |  \\  |  \\          |  \\")
     print("|  ▓▓▓▓▓▓\\__    __  ______   ______   ______ | ▓▓\\ | ▓▓ ______  _| ▓▓_")   
@@ -337,7 +376,8 @@ def title_screen():
     print("  \\▓▓▓▓▓▓  \\▓▓▓▓▓▓| ▓▓▓▓▓▓▓  \\▓▓▓▓▓▓▓\\▓▓      \\▓▓   \\▓▓ \\▓▓▓▓▓▓▓   \\▓▓▓▓") 
     print("                  | ▓▓")                                                   
     print("                  | ▓▓")                                                   
-    print("                   \\▓▓")                                                   
+    print("                   \\▓▓")      
+    print("")                                             
     print("╒═════════════════════════════════════════════════════════════════════════╕")
     print("│                SUPER SOCIAL NETWORKING FOR SUPERHEROES                  │")
     print("╘═════════════════════════════════════════════════════════════════════════╛")
@@ -383,10 +423,33 @@ Enter your selection: """)
             print("")
             print("ABILITIES:")
             select_all_abilities()
-            input()
-            os.system('clear')
-            title_screen()
-            menu_list()
+            print("")
+            print("1.) Add a New Ability")
+            print("2.) Delete an Ability")
+            print("3.) Return to Main Menu")
+            abilities_choice = input()
+            match abilities_choice:
+                case "1":
+                    title_screen()
+                    print("")
+                    print("CREATING A NEW ABILITY")
+                    print("")
+                    ability_desc_in = input("Enter the new ability: ")
+                    create_new_ability(ability_desc_in)
+                case "2":
+                    title_screen()
+                    print("")
+                    print("REMOVE AN EXISTING ABILITY")
+                    print("")
+                    ability_desc_in = input("Enter ability to remove, or enter <L> for a list: ")
+                    if ability_desc_in.upper() == "L":
+                        select_all_abilities()
+                        ability_desc_in = input("Enter ability to remove: ")
+                    remove_existing_ability(ability_desc_in)
+                case "3":
+                    os.system('clear')
+                    title_screen()
+                    menu_list()
 
         case "4":
             title_screen()
@@ -417,11 +480,7 @@ Enter your selection: """)
         case "0":
             sys.exit()
 
-    print("")
-    input("Sorry, that was an invalid entry.")
-    os.system('clear')
-    title_screen()
-    menu_list()    
+
 
 # ------------------------------------ ACTUAL MAIN PROGRAM -----------------------------------------------
 
