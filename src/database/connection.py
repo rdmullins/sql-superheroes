@@ -67,8 +67,9 @@ def search_by_name(name_in):
     query = """
         SELECT %s FROM heroes
     """
-    hero = execute_query(query, (name_in,)).fetchall()
-    print(hero)
+    returned_items = execute_query(query, (name_in,)).fetchall()
+    for item in returned_items:
+        print(item[0])
     input()
     os.system('clear')
     title_screen()
@@ -89,14 +90,17 @@ def create_new_superhero(name_in, about_in, bio_in):
 
 def all_superheroes_with_abilities():
     query = """
-        SELECT name FROM heroes
-        JOIN abilities ON id = hero_id
+        SELECT heroes.name, ability_types.name FROM heroes
+        JOIN abilities ON abilities.hero_id = heroes.id
+        JOIN ability_types ON ability_types.id = abilities.ability_type_id;
         """
     print("")
     returned_items = execute_query(query).fetchall()
+    #print(returned_items)
     for item in returned_items:
-        print(item[1])
-        print(item[2])
+        print(item[0] + "\t \t" + item[1])
+        #print(item[0][0], item[1][1])
+        #print(item[2])
     input()
     os.system('clear')
     title_screen()
@@ -136,14 +140,14 @@ Enter your selection: """)
             print("")
             print("ABILITIES:")
             select_all_abilities()
-        
+
         case "4":
             print("")
             name_in = input("Enter the superhero's name: ")
             about_in = input("Enter a brief 'about me' section: ")
             bio_in = input("Enter a more detailed biography: ")
             create_new_superhero(name_in, about_in, bio_in)
-        
+
         case "5":
             print("")
             all_superheroes_with_abilities()
