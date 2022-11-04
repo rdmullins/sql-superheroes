@@ -2,6 +2,7 @@ import psycopg
 from psycopg import OperationalError
 import os
 import sys
+import random
 
 def create_connection(db_name, db_user, db_password, db_host = "localhost", db_port = "5432"):
     connection = None
@@ -47,6 +48,7 @@ def select_all_heroes():
     returned_items = execute_query(query).fetchall()
     for item in returned_items:
         print(item[1])
+    return returned_items
 
 
 def select_all_abilities():
@@ -474,15 +476,206 @@ Enter your selection: """)
                 print("SUPERHEROES:")
                 select_all_heroes()
                 print("")
-                name_in = input("Superhero's to Remove: ")
+                name_in = input("Superhero to Remove: ")
             delete_superhero(name_in)
+
+        case "7":
+            super_secret_battle_mode()
+            title_screen()
+            menu_list()
 
         case "0":
             sys.exit()
 
 
+def super_secret_battle_mode_dice_roll():
+    
+    def dice_roll():
+        DICE_ART = {
+            1: (
+                "┌─────────┐",
+                "│         │",
+                "│    ●    │",
+                "│         │",
+                "└─────────┘",
+            ),
+            2: (
+                "┌─────────┐",
+                "│  ●      │",
+                "│         │",
+                "│      ●  │",
+                "└─────────┘",
+            ),
+            3: (
+                "┌─────────┐",
+                "│  ●      │",
+                "│    ●    │",
+                "│      ●  │",
+                "└─────────┘",
+            ),
+            4: (
+                "┌─────────┐",
+                "│  ●   ●  │",
+                "│         │",
+                "│  ●   ●  │",
+                "└─────────┘",
+            ),
+            5: (
+                "┌─────────┐",
+                "│  ●   ●  │",
+                "│    ●    │",
+                "│  ●   ●  │",
+                "└─────────┘",
+            ),
+            6: (
+                "┌─────────┐",
+                "│  ●   ●  │",
+                "│  ●   ●  │",
+                "│  ●   ●  │",
+                "└─────────┘",
+            ),
+        }
+        DIE_HEIGHT = len(DICE_ART[1])
+        DIE_WIDTH = len(DICE_ART[1][0])
+        DIE_FACE_SEPARATOR = " "
+
+        def generate_dice_faces_diagram(dice_values):
+            # Return an ASCII diagram of dice faces
+
+            dice_faces = []
+            for value in dice_values:
+                dice_faces.append(DICE_ART[value])
+
+            dice_faces_rows = []
+            for row_idx in range(DIE_HEIGHT):
+                row_components = []
+                for die in dice_faces:
+                    row_components.append(die[row_idx])
+                row_string = DIE_FACE_SEPARATOR.join(row_components)
+                dice_faces_rows.append(row_string)
+
+            width = len(dice_faces_rows[0])
+            diagram_header = " RESULTS".center(width, "-")
+
+            dice_faces_diagram = "\n".join([diagram_header] + dice_faces_rows)
+            return dice_faces_diagram
+
+
+        def parse_input(input_string):
+            # Return 'input_string' as an integer 1-6
+
+            # Validate user input
+            if input_string.strip() in {"1", "2", "3", "4", "5", "6"}:
+                return int(input_string)
+            else:
+                print("Please enter a number from 1 to 6.")
+                raise SystemExit(1)
+
+        def roll_dice(num_dice):
+            # Return list of integers with length num_dice
+
+            # Each int returned is random number between 1 and 6 inclusive
+
+            roll_results = []
+            for _ in range(num_dice):
+                roll = random.randint(1, 6)
+                roll_results.append(roll)
+            return roll_results
+
+        # --- Main Code Block
+
+        # 1 - Get and validate user input
+
+        num_dice_input = input("How many dice do you want to roll? [1-6] ")
+        num_dice = parse_input(num_dice_input)
+
+        # 2 - Roll the dice
+
+        roll_results = roll_dice(num_dice)
+
+        # 3 - Generate ASCII art
+        dice_face_diagram = generate_dice_faces_diagram(roll_results)
+
+        # 4 - Display diagram
+        print(f"\n{dice_face_diagram}")
+        return(roll_results)
+    
+    # This was a project from realpython.com
+    rand_num = dice_roll()
+    total_rolled = 0
+    for numb in rand_num:
+        total_rolled = total_rolled + numb
+    return total_rolled
+
+
+def super_secret_battle_mode():
+    os.system('clear')
+    title_screen()
+    print("S U P E R  S E C R E T  ( B E T A )  B A T T L E  M O D E  A C T I V A T E D ! ! ! !")
+    print("")
+    print("")
+    hero_1_name_in = input("Enter the first combatant (or enter <L> to see a list, or <R> for random): ")
+    if hero_1_name_in.upper() == "R":
+        print("")
+        print("Choosing a Random Combatant From:")
+        all_heroes = select_all_heroes()
+        print("")
+        combatant_list = []
+        for hero in all_heroes:
+            combatant_list.append(hero[1])
+        # print(len(hero))
+        # print(hero)
+        hero_1_name_in = (random.choice(hero))
+    elif hero_1_name_in.upper() == "L":
+        print("")
+        print("SUPERHEROES:")
+        select_all_heroes()
+        print("")
+        hero_1_name_in = input("First Combatant: ")
+    hero_2_name_in = input("Enter the second combatant (or enter <L> to see a list, or <R> for random): ")
+    if hero_2_name_in.upper() == "R":
+        print("")
+        print("Choosing a Random Combatant From:")
+        all_heroes = select_all_heroes()
+        print("")
+        combatant_list = []
+        for hero in all_heroes:
+            combatant_list.append(hero[1])
+        # print(len(hero))
+        # print(hero)
+        hero_2_name_in = (random.choice(hero))
+    elif hero_2_name_in.upper() == "L":
+        print("")
+        print("SUPERHEROES:")
+        select_all_heroes()
+        print("")
+        hero_2_name_in = input("Second Combatant: ")
+    
+    print("")
+    print("The battle is set!")
+    print("")
+    print(hero_1_name_in, " in combat with ", hero_2_name_in)
+    print("")
+    print("It's time for ", hero_1_name_in, " to roll!")
+    hero_1_hit = super_secret_battle_mode_dice_roll()
+    print(hero_1_hit)
+    print("")
+    print("Now it's time for ", hero_2_name_in, " to roll!")
+    hero_2_hit = super_secret_battle_mode_dice_roll()
+    print(hero_2_hit)
+    print("")
+    if hero_1_hit > hero_2_hit:
+        print(hero_1_name_in, " is victorious!")
+    elif hero_1_hit < hero_2_hit:
+        print(hero_2_name_in, " is victorious!")
+    else:
+        print("It's a draw!")
+    input()
+
 
 # ------------------------------------ ACTUAL MAIN PROGRAM -----------------------------------------------
+
+
 
 title_screen()
 menu_list()
